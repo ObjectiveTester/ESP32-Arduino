@@ -1,6 +1,6 @@
 //
 // RGB LED controller via web interface
-// Steve Mellor 12 Mar 2018
+//  Steve Mellor 18/03/2018
 //
 // based on Arduino.cc WebServer example
 // created 18 Dec 2009
@@ -23,9 +23,11 @@ const char* password = "allthethings";
 WiFiServer server(80);
 
 //hardware config
+#define COMMON_ANODE
 #define RED_PIN 13
 #define GREEN_PIN 12
 #define BLUE_PIN 14
+
 int redChannel = 0;
 int greenChannel = 1;
 int blueChannel = 2;
@@ -47,11 +49,16 @@ String rgb = dec2hex(redValue) + dec2hex(greenValue) + dec2hex(blueValue);
 
 void setColor()
 {
-  //ifdef for common cathode
-
+  #ifdef COMMON_ANODE
   ledcWrite(redChannel, redValue);
   ledcWrite(greenChannel, greenValue);
   ledcWrite(blueChannel, blueValue);
+  #endif
+  #ifdef COMMON_CATHODE
+  ledcWrite(redChannel, 255 - redValue);
+  ledcWrite(greenChannel, 255 - greenValue);
+  ledcWrite(blueChannel, 255 - blueValue);
+  #endif
 }
 
 void setup()
@@ -83,7 +90,7 @@ void setup()
     Serial.print(".");
   }
 
-  digitalWrite(2,1);
+  digitalWrite(2, 1);
   Serial.println("");
   Serial.println("WiFi connected.");
   Serial.print("IP address: ");
@@ -177,6 +184,7 @@ void loop()
           {
             String req = String(req_str.substring(req_str.indexOf("color"), req_str.indexOf(" HTTP")));
             updateColor(req);
+            cycle = false;
           }
           if (req_str.indexOf("cycle") > 0)
           {
@@ -185,17 +193,42 @@ void loop()
               cycle = true;
               if ((redValue > 0) && (blueValue > 0) && (greenValue > 0))
               {
-
                 if ((blueValue < redValue) && (blueValue < greenValue))
                 {
                   blueValue = 0;
+                  if (redValue > greenValue)
+                  {
+                    redValue = 255;
+                  }
+                  else
+                  {
+                    greenValue = 255;
+                  }
                 }
                 else if ((greenValue < redValue) && (greenValue < blueValue))
                 {
                   greenValue = 0;
+                  if (redValue > blueValue)
+                  {
+                    redValue = 255;
+                  }
+                  else
+                  {
+                    blueValue = 255;
+                  }
                 }
                 else
                   redValue = 0;
+                if (greenValue > blueValue)
+                {
+                  greenValue = 255;
+                }
+                else
+                {
+                  blueValue = 255;
+                }
+              } else {
+                redValue = 255;
               }
             }
             else
@@ -255,7 +288,6 @@ void loop()
     {
       blueValue--;
     }
-
     setColor();
     delay(5);
   }
